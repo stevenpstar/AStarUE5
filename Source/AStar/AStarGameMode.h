@@ -22,7 +22,7 @@ public:
 private:
 	void GenerateGrid();
 	AGPoint* GetNextPoint(AGPoint* Point);
-	void CheckPoint(int32 x, int32 y, int32* LowestCost, AGPoint *& LowestPoint, AGPoint* Parent, int32 Cost);
+	void CheckPoint(int32 x, int32 y, int32* LowestCost, AGPoint *& LowestPoint, AGPoint* Parent, int32 Cost, bool* FoundWall);
 	bool AddToOpenSet(AGPoint* AddPoint);
 	bool InClosedSet(AGPoint* Point);
 	// maybe should be float, maybe not

@@ -25,6 +25,15 @@ void AGPoint::SetSelected(bool Selected)
 	}
 }
 
+void AGPoint::SetTraversable(bool Trav)
+{
+	Traversable = Trav;
+	if (!Traversable && TraversableMaterial) {
+		Mesh->SetMaterial(0, TraversableMaterial);
+		Mesh->SetRelativeScale3D(FVector(2, 2, 2));
+	}
+}
+
 // Called when the game starts or when spawned
 void AGPoint::BeginPlay()
 {
@@ -45,7 +54,9 @@ void AGPoint::OnClickedActor(UPrimitiveComponent* TouchedActor, FKey ButtonPress
 
 void AGPoint::OnHoveredActor(UPrimitiveComponent* TouchedComponent)
 {
-
+	if (!Traversable) {
+		return;
+	}
 	AAStarGameMode* GameMode = Cast<AAStarGameMode>(GetWorld()->GetAuthGameMode());
 	SetSelected(true);
 	if (GameMode) {

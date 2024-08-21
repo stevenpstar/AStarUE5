@@ -32,6 +32,13 @@ void AAStarGameMode::GenerateGrid()
 				FVector(xPos, yPos, zPos), FRotator(0.0f, 0.0f, 0.0f), FActorSpawnParameters());
 			GPoint->x = x;
 			GPoint->y = y;
+
+			// TODO: Temporarily placing random walls.
+			// Traversable should probably be a function that returns traversable depending on tile type.
+			int32 randGen = FMath::RandRange(1, 10);
+			if (randGen <= 2 && (x != 0 && y != 0)) {
+				GPoint->SetTraversable(false);
+			}
 		}
 	}
 }
@@ -77,51 +84,66 @@ AGPoint* AAStarGameMode::GetNextPoint(AGPoint* Point)
 	int32 y = Point->y;
 	AGPoint* LowestPoint = nullptr;
 	int32 LowestCost = INT32_MAX;
+	bool NorthWall = false;
+	bool EastWall = false;
+	bool SouthWall = false;
+	bool WestWall = false;
+	bool NEWall = false;
+	bool NWWall = false;
+	bool SEWall = false;
+	bool SWWall = false;
 	// Check North
 	if (y + 1 < MaxY) {
-		CheckPoint(x, y + 1, &LowestCost, LowestPoint, Point, 10);
+		CheckPoint(x, y + 1, &LowestCost, LowestPoint, Point, 10, &NorthWall);
 	}
 	// Check South
 	if (y - 1 >= 0) {
-		CheckPoint(x, y - 1, &LowestCost, LowestPoint, Point, 10);
+		CheckPoint(x, y - 1, &LowestCost, LowestPoint, Point, 10, &SouthWall);
 	}
 	// Check East
 	if (x + 1 < MaxX) {
-		CheckPoint(x + 1, y, &LowestCost, LowestPoint, Point, 10);
+		CheckPoint(x + 1, y, &LowestCost, LowestPoint, Point, 10, &EastWall);
 	}
 	// Check West
 	if (x - 1 >= 0) {
-		CheckPoint(x - 1, y, &LowestCost, LowestPoint, Point, 10);
+		CheckPoint(x - 1, y, &LowestCost, LowestPoint, Point, 10, &WestWall);
 	}
 	// Check North-East
 	if (y + 1 < MaxY && x + 1 < MaxX) {
-		CheckPoint(x + 1, y + 1, &LowestCost, LowestPoint, Point, 14);
+		if (NorthWall == false && EastWall == false) 
+			CheckPoint(x + 1, y + 1, &LowestCost, LowestPoint, Point, 14, &NEWall);
 	}
 
 	if (y - 1 >= 0 && x + 1 < MaxX) {
-		CheckPoint(x + 1, y - 1, &LowestCost, LowestPoint, Point, 14);
+		if (SouthWall == false && EastWall == false) 
+			CheckPoint(x + 1, y - 1, &LowestCost, LowestPoint, Point, 14, &SEWall);
 	}
 
 	if (y + 1 < MaxY && x - 1 >= 0) {
-		CheckPoint(x - 1, y + 1, &LowestCost, LowestPoint, Point, 14);
+		if (NorthWall == false && WestWall == false) 
+			CheckPoint(x - 1, y + 1, &LowestCost, LowestPoint, Point, 14, &NWWall);
 	}
 
 	if (y - 1 >= 0 && x - 1 >= 0) {
-		CheckPoint(x - 1, y - 1, &LowestCost, LowestPoint, Point, 14);
+		if (SouthWall == false && WestWall == false) 
+			CheckPoint(x - 1, y - 1, &LowestCost, LowestPoint, Point, 14, &SWWall);
 	}
 
 	return LowestPoint;
 }
 
-void AAStarGameMode::CheckPoint(int32 x, int32 y, int32* LowestCost, AGPoint *& LowestPoint, AGPoint* Parent, int32 Cost)
+void AAStarGameMode::CheckPoint(int32 x, int32 y, int32* LowestCost, AGPoint *& LowestPoint, AGPoint* Parent, int32 Cost, bool* FoundWall)
 {
 	AGPoint* GPoint = GetPoint(x, y);
 	if (!GPoint) {
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "GPoint Not Found");
 		return;
 	}
-	if (InClosedSet(GPoint)) {
-		// Ignore this point if it is already in the closed set.
+	if (InClosedSet(GPoint) || GPoint->Traversable == false) {
+		// Ignore this point if it is already in the closed set or it is a non-traversable tile
+		if (!GPoint->Traversable) {
+			*FoundWall = true;
+		}
 		return;
 	}
 	if (!AddToOpenSet(GPoint)) {
@@ -181,8 +203,7 @@ void AAStarGameMode::FindPath()
 			return;
 		}
 		if (NextPoint == nullptr) { 
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "Next Point found to be null, returning.");
-			return;
+			NextPoint = Selected->Parent;
 		}
 		// Remove Starting Node (Consider RemoveAtSwap if performance is an issue)
 		OpenSet.RemoveAt(CurrentPointIndex);
@@ -190,7 +211,6 @@ void AAStarGameMode::FindPath()
 		if (Selected == EndPoint) {
 			GoalFound = true;
 			Selected->SetSelected(true);
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Magenta, "Goal Found");
 			break;
 		}
 
@@ -200,7 +220,18 @@ void AAStarGameMode::FindPath()
 			Selected = NextPoint;
 		}
 		else {
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "Uh Something went wrong");
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "Cannot Find Path");
+		for (AGPoint* OP : OpenSet) {
+			OP->SetSelected(false);
+		}
+		for (AGPoint* OP : ClosedSet) {
+			OP->SetSelected(false);
+		}
+
+		OpenSet.Empty();
+		ClosedSet.Empty();
+		break;
+
 		}
 		maxTriesCounter++;
 	}

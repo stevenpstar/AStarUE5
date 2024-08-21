@@ -18,6 +18,7 @@ public:
 	int32 y;
 	int32 height;
 	int32 Cost = 0;
+	bool Traversable = true;
 	AGPoint* Parent = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
@@ -26,7 +27,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 	UMaterialInterface* SelectedMaterial;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+	UMaterialInterface* TraversableMaterial;
+
 	void SetSelected(bool Selected);
+	void SetTraversable(bool Trav);
 
 protected:
 	// Called when the game starts or when spawned
