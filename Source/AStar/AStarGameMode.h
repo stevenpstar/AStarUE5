@@ -27,29 +27,30 @@ public:
 	void SetCharacter(AStarCharacter* Char);
 private:
 	void GenerateGrid();
-	AGPoint* GetNextPoint(AGPoint* Point);
-	void CheckPoint(int32 x, int32 y, int32* LowestCost, AGPoint *& LowestPoint, AGPoint* Parent, int32 Cost, bool* FoundWall);
+	void AddNeighbours(AGPoint* Point);
+	void CheckPoint(int32 x, int32 y, AGPoint* Parent, int32 Cost, bool* FoundWall);
+
 	bool AddToOpenSet(AGPoint* AddPoint);
 	bool InClosedSet(AGPoint* Point);
-	// maybe should be float, maybe not
+
 	int32 CalculateHeuristic(AGPoint* Start, AGPoint* End);
 	
-	int32 GetIndex(AGPoint* Point);
 	int32 mapWidth = 8;
 	int32 mapHeight = 8;
-
-	AGPoint* GetPoint(int32 x, int32 y);
-	AGPoint* Selected;
-	AGPoint* EndPoint;
 	int32 CurrentPointIndex;
 
-	TArray<AActor*> Points;
+	bool PlayerSelected = false;
 
+	AGPoint* GetPoint(int32 x, int32 y);
+	AGPoint* GetNextPoint();
+	AGPoint* Selected;
+	AGPoint* EndPoint;
+	AStarCharacter* Character;
+
+	TArray<AActor*> Points;
 	TArray<AGPoint*> OpenSet;
 	TArray<AGPoint*> ClosedSet;
 
-	AStarCharacter* Character;
-	bool PlayerSelected = false;
 
 protected:
 	virtual void BeginPlay() override;

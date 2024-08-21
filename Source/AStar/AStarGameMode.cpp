@@ -9,6 +9,7 @@
 // n = next node  on path
 // g(n) is cost of path from the start to n
 // h(n) is estimated cost of cheapest path from n to the goal
+// Using TArray, no priority queue
 void AAStarGameMode::PointClicked(AGPoint* Point)
 {
 	if (!PlayerSelected) {
@@ -20,8 +21,7 @@ void AAStarGameMode::PointClicked(AGPoint* Point)
 		return;
 	}
 	Selected = GetPoint(0, 0);
-	int32 Index = GetIndex(Selected);
-	EndPoint = Point;// GetPoint(7, 7);
+	EndPoint = Point;
 	FindPath();
 }
 
@@ -55,19 +55,6 @@ void AAStarGameMode::GenerateGrid()
 	Ch->OnPoint = GetPoint(0, 0);
 }
 
-int32 AAStarGameMode::GetIndex(AGPoint* Point)
-{
-	int32 index = Point->x + (Point->y * mapWidth);
-	if (index < Points.Num()) {
-		AGPoint* gp = Cast<AGPoint>(Points[index]);
-		if (gp) {
-			int32 h = (7 - gp->x) + (7 - gp->y);
-			return index;
-		}
-	}
-	return -1;
-}
-
 AGPoint* AAStarGameMode::GetPoint(int32 x, int32 y)
 {
 	int32 index = x + (y * mapWidth);
@@ -84,18 +71,34 @@ AGPoint* AAStarGameMode::GetPoint(int32 x, int32 y)
 	return nullptr;
 }
 
-AGPoint* AAStarGameMode::GetNextPoint(AGPoint* Point)
+AGPoint* AAStarGameMode::GetNextPoint()
+{
+	int32 LowestCost = INT32_MAX;
+	AGPoint* CheapestPoint = nullptr;
+	int32 h = 0;
+	for (int i = 0; i < OpenSet.Num();i++) {
+		h = OpenSet[i]->Cost + CalculateHeuristic(OpenSet[i], EndPoint);
+		if (h < LowestCost) {
+			LowestCost = OpenSet[i]->Cost;
+			CheapestPoint = OpenSet[i];
+		}
+	}
+
+	if (CheapestPoint == nullptr) {
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "No Cheapest Point found?");
+	}
+	return CheapestPoint;
+}
+
+void AAStarGameMode::AddNeighbours(AGPoint* Point)
 {
 	if (!Point) { 
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "Point is null");
-		return nullptr; 
 	}
-	int32 MaxY = mapHeight;
-	int32 MaxX = mapWidth;
 	int32 x = Point->x;
 	int32 y = Point->y;
-	AGPoint* LowestPoint = nullptr;
-	int32 LowestCost = INT32_MAX;
+
+	// Checking walls
 	bool NorthWall = false;
 	bool EastWall = false;
 	bool SouthWall = false;
@@ -105,48 +108,50 @@ AGPoint* AAStarGameMode::GetNextPoint(AGPoint* Point)
 	bool SEWall = false;
 	bool SWWall = false;
 	// Check North
-	if (y + 1 < MaxY) {
-		CheckPoint(x, y + 1, &LowestCost, LowestPoint, Point, 10, &NorthWall);
+	if (y + 1 < mapHeight) {
+		CheckPoint(x, y + 1, Point, 10, &NorthWall);
 	}
 	// Check South
 	if (y - 1 >= 0) {
-		CheckPoint(x, y - 1, &LowestCost, LowestPoint, Point, 10, &SouthWall);
+		CheckPoint(x, y - 1, Point, 10, &SouthWall);
 	}
 	// Check East
-	if (x + 1 < MaxX) {
-		CheckPoint(x + 1, y, &LowestCost, LowestPoint, Point, 10, &EastWall);
+	if (x + 1 < mapWidth) {
+		CheckPoint(x + 1, y, Point, 10, &EastWall);
 	}
 	// Check West
 	if (x - 1 >= 0) {
-		CheckPoint(x - 1, y, &LowestCost, LowestPoint, Point, 10, &WestWall);
+		CheckPoint(x - 1, y, Point, 10, &WestWall);
 	}
 	// Check North-East
-	if (y + 1 < MaxY && x + 1 < MaxX) {
+	if (y + 1 < mapHeight && x + 1 < mapWidth) {
 		if (NorthWall == false && EastWall == false) 
-			CheckPoint(x + 1, y + 1, &LowestCost, LowestPoint, Point, 14, &NEWall);
+			CheckPoint(x + 1, y + 1, Point, 14, &NEWall);
 	}
 
-	if (y - 1 >= 0 && x + 1 < MaxX) {
+	if (y - 1 >= 0 && x + 1 < mapWidth) {
 		if (SouthWall == false && EastWall == false) 
-			CheckPoint(x + 1, y - 1, &LowestCost, LowestPoint, Point, 14, &SEWall);
+			CheckPoint(x + 1, y - 1, Point, 14, &SEWall);
 	}
 
-	if (y + 1 < MaxY && x - 1 >= 0) {
+	if (y + 1 < mapHeight && x - 1 >= 0) {
 		if (NorthWall == false && WestWall == false) 
-			CheckPoint(x - 1, y + 1, &LowestCost, LowestPoint, Point, 14, &NWWall);
+			CheckPoint(x - 1, y + 1, Point, 14, &NWWall);
 	}
 
 	if (y - 1 >= 0 && x - 1 >= 0) {
 		if (SouthWall == false && WestWall == false) 
-			CheckPoint(x - 1, y - 1, &LowestCost, LowestPoint, Point, 14, &SWWall);
+			CheckPoint(x - 1, y - 1, Point, 14, &SWWall);
 	}
-
-	return LowestPoint;
 }
 
-void AAStarGameMode::CheckPoint(int32 x, int32 y, int32* LowestCost, AGPoint *& LowestPoint, AGPoint* Parent, int32 Cost, bool* FoundWall)
+// Checks if the point at x, y position is valid (traversable), re-parents if necessary and calculates and sets cost of traversal
+void AAStarGameMode::CheckPoint(int32 x, int32 y, AGPoint* Parent, int32 Cost, bool* FoundWall)
 {
 	AGPoint* GPoint = GetPoint(x, y);
+	if (GPoint == Parent) {
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "GPoint == Parent this shouldn't happen");
+	}
 	if (!GPoint) {
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "GPoint Not Found");
 		return;
@@ -160,23 +165,16 @@ void AAStarGameMode::CheckPoint(int32 x, int32 y, int32* LowestCost, AGPoint *& 
 	}
 	if (!AddToOpenSet(GPoint)) {
 		// GPoint already existed in the open set, need to check if cost from new point is cheaper
-		int32 NewCost = Parent->Cost + Cost;
-		if (NewCost > GPoint->Cost) {
+		int32 OldCost = Parent->Cost;
+		if (OldCost > GPoint->Cost + Cost) {
 			// Reparent
-		//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, "Reparenting");
-			//GPoint->Parent = Parent;
+			GPoint->Parent = Parent;
 		}
 	}
 	else {
 		GPoint->Parent = Parent;
 	}
 	GPoint->Cost = Parent->Cost + Cost;
-
-	int32 h = GPoint->Cost + CalculateHeuristic(GPoint, EndPoint);
-	if (h < *LowestCost) {
-		*LowestCost = h;
-		LowestPoint = GPoint;
-	}
 }
 
 void AAStarGameMode::FindPath()
@@ -184,7 +182,7 @@ void AAStarGameMode::FindPath()
 	int32 maxTries = 100;
 	int32 maxTriesCounter = 0;
 	bool GoalFound = false;
-	// set every point found in prev open/closed sets to not selected
+	// set every point found in prev open/closed sets to not selected to clear visuals
 	for (AGPoint* OP : OpenSet) {
 		OP->SetSelected(false);
 	}
@@ -194,38 +192,38 @@ void AAStarGameMode::FindPath()
 
 	OpenSet.Empty();
 	ClosedSet.Empty();
-	// Add Starting Point to Open Set and save index
 	if (!Selected) {
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, 
 			"Selected not found, not finding path!");
 		return;
 	}
 	Selected->SetSelected(true);
+
+	ClosedSet.Push(Selected);
 	while (!GoalFound && maxTriesCounter < maxTries) {
-		AddToOpenSet(Selected);
-		// Temp
+		// Add any neighbours that aren't in the open list, to the open list
+		AddNeighbours(Selected);
+		AGPoint* NextPoint = GetNextPoint();
 		for (int i = 0; i < OpenSet.Num(); i++) {
-			if (OpenSet[i] == Selected) {
+			if (OpenSet[i] == NextPoint) {
 				CurrentPointIndex = i;
 			}
 		}
-		// Check neighbours, we add our selected (starting point) node as their parent.
-		AGPoint* NextPoint = GetNextPoint(Selected);
+		ClosedSet.Push(NextPoint);
+		OpenSet.RemoveAt(CurrentPointIndex);
 		if (Selected == nullptr) { 
 			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "Selected found to be null, returning.");
 			return;
 		}
 		if (NextPoint == nullptr) { 
-			NextPoint = Selected->Parent;
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "No Next Point found, going to return error for now");
+			return;
 		}
-		// Remove Starting Node (Consider RemoveAtSwap if performance is an issue)
-		OpenSet.RemoveAt(CurrentPointIndex);
-		ClosedSet.Push(Selected);
 		if (Selected == EndPoint) {
 			GoalFound = true;
+			// We found our goal yay
 			break;
 		}
-
 		if (OpenSet.Num() > 0) {
 			Selected = NextPoint;
 		}
@@ -261,7 +259,7 @@ void AAStarGameMode::FindPath()
 
 void AAStarGameMode::SetCharacter(AStarCharacter* Char)
 {
-	// Sets character also sets it selected, not sure about setting character???
+	// Sets character also sets it selected
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "Setting Character");
 	Character = Char;
 	PlayerSelected = true;
@@ -279,20 +277,18 @@ bool AAStarGameMode::AddToOpenSet(AGPoint* AddPoint)
 	if (!found) {
 		OpenSet.Push(AddPoint);
 	}
+	// This is bad, basically return true if the function added the node to the open set
 	return !found;
 }
 
 bool AAStarGameMode::InClosedSet(AGPoint* Point)
 {
 	bool found = false;
-	if (!found) {
-		for (AGPoint* P : ClosedSet) {
-			if (P == Point) {
-				found = true;
-			}
+	for (AGPoint* P : ClosedSet) {
+		if (P == Point) {
+			found = true;
 		}
 	}
-
 	return found;
 }
 
