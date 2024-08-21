@@ -22,8 +22,9 @@ public:
 private:
 	void GenerateGrid();
 	AGPoint* GetNextPoint(AGPoint* Point);
-	void CheckPoint(int32 x, int32 y, int32* LowestCost, AGPoint *& LowestPoint, AGPoint* Parent);
-	void AddToOpenSet(AGPoint* AddPoint);
+	void CheckPoint(int32 x, int32 y, int32* LowestCost, AGPoint *& LowestPoint, AGPoint* Parent, int32 Cost);
+	bool AddToOpenSet(AGPoint* AddPoint);
+	bool InClosedSet(AGPoint* Point);
 	// maybe should be float, maybe not
 	int32 CalculateHeuristic(AGPoint* Start, AGPoint* End);
 	

@@ -13,16 +13,9 @@ void AAStarGameMode::PointClicked(AGPoint* Point)
 	if (Selected) {
 		Selected->SetSelected(false);
 	}
-	Selected = Point;
+	Selected = GetPoint(0, 0);
 	int32 Index = GetIndex(Selected);
-	EndPoint = GetPoint(7, 7);
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "Point clicked called in game mode, Starting Pathfinding...");
-	if (!Selected) {
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "Selected is nullptr");
-	} 
-	if (!EndPoint) {
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "EndPoint is nullptr");
-	}
+	EndPoint = Point;// GetPoint(7, 7);
 	FindPath();
 }
 
@@ -59,15 +52,13 @@ int32 AAStarGameMode::GetIndex(AGPoint* Point)
 AGPoint* AAStarGameMode::GetPoint(int32 x, int32 y)
 {
 	int32 index = x + (y * mapWidth);
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green,
-		FString::Printf(TEXT("Checking index: %d"), index));
 	if (index < Points.Num()) {
 		AGPoint* gp = Cast<AGPoint>(Points[index]);
 		if (gp) {
 			return gp;
 		}
 		else {
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green,
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red,
 				"GP Not found");
 		}
 	}
@@ -86,63 +77,70 @@ AGPoint* AAStarGameMode::GetNextPoint(AGPoint* Point)
 	int32 y = Point->y;
 	AGPoint* LowestPoint = nullptr;
 	int32 LowestCost = INT32_MAX;
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Emerald, 
-		FString::Printf(TEXT("x, y, %d, %d"), x, y));
-
 	// Check North
 	if (y + 1 < MaxY) {
-		CheckPoint(x, y + 1, &LowestCost, LowestPoint, Point);
+		CheckPoint(x, y + 1, &LowestCost, LowestPoint, Point, 10);
 	}
 	// Check South
 	if (y - 1 >= 0) {
-		CheckPoint(x, y - 1, &LowestCost, LowestPoint, Point);
+		CheckPoint(x, y - 1, &LowestCost, LowestPoint, Point, 10);
 	}
 	// Check East
 	if (x + 1 < MaxX) {
-		CheckPoint(x + 1, y, &LowestCost, LowestPoint, Point);
+		CheckPoint(x + 1, y, &LowestCost, LowestPoint, Point, 10);
 	}
 	// Check West
 	if (x - 1 >= 0) {
-		CheckPoint(x - 1, y, &LowestCost, LowestPoint, Point);
+		CheckPoint(x - 1, y, &LowestCost, LowestPoint, Point, 10);
 	}
 	// Check North-East
 	if (y + 1 < MaxY && x + 1 < MaxX) {
-		CheckPoint(x + 1, y + 1, &LowestCost, LowestPoint, Point);
+		CheckPoint(x + 1, y + 1, &LowestCost, LowestPoint, Point, 14);
 	}
 
 	if (y - 1 >= 0 && x + 1 < MaxX) {
-		CheckPoint(x + 1, y - 1, &LowestCost, LowestPoint, Point);
+		CheckPoint(x + 1, y - 1, &LowestCost, LowestPoint, Point, 14);
 	}
 
 	if (y + 1 < MaxY && x - 1 >= 0) {
-		CheckPoint(x - 1, y + 1, &LowestCost, LowestPoint, Point);
+		CheckPoint(x - 1, y + 1, &LowestCost, LowestPoint, Point, 14);
 	}
 
 	if (y - 1 >= 0 && x - 1 >= 0) {
-		CheckPoint(x - 1, y - 1, &LowestCost, LowestPoint, Point);
+		CheckPoint(x - 1, y - 1, &LowestCost, LowestPoint, Point, 14);
 	}
 
 	return LowestPoint;
 }
 
-void AAStarGameMode::CheckPoint(int32 x, int32 y, int32* LowestCost, AGPoint *& LowestPoint, AGPoint* Parent)
+void AAStarGameMode::CheckPoint(int32 x, int32 y, int32* LowestCost, AGPoint *& LowestPoint, AGPoint* Parent, int32 Cost)
 {
 	AGPoint* GPoint = GetPoint(x, y);
 	if (!GPoint) {
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "GPoint Not Found");
+		return;
 	}
-	// TODO: Setting Parent will need to change, come back to this
-	GPoint->Parent = Parent;
-	GPoint->Cost = Parent->Cost + 1;
-	AddToOpenSet(GPoint);
+	if (InClosedSet(GPoint)) {
+		// Ignore this point if it is already in the closed set.
+		return;
+	}
+	if (!AddToOpenSet(GPoint)) {
+		// GPoint already existed in the open set, need to check if cost from new point is cheaper
+		int32 NewCost = Parent->Cost + Cost;
+		if (NewCost > GPoint->Cost) {
+			// Reparent
+			GPoint->Parent = Parent;
+		}
+	}
+	else {
+		GPoint->Parent = Parent;
+	}
+	GPoint->Cost = Parent->Cost + Cost;
+
 	int32 h = GPoint->Cost + CalculateHeuristic(GPoint, EndPoint);
 	if (h < *LowestCost) {
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "GPoint is next lowest");
 		*LowestCost = h;
 		LowestPoint = GPoint;
-		if (LowestPoint) {
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "LowestPoint is set!");
-		}
 	}
 }
 
@@ -162,8 +160,6 @@ void AAStarGameMode::FindPath()
 	OpenSet.Empty();
 	ClosedSet.Empty();
 	// Add Starting Point to Open Set and save index
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Emerald, 
-		FString::Printf(TEXT("Finding path from, x: %d y: %d, OpenNum: %d"), Selected->x, Selected->y, OpenSet.Num()));
 	if (!Selected) {
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, 
 			"Selected not found, not finding path!");
@@ -195,8 +191,8 @@ void AAStarGameMode::FindPath()
 			GoalFound = true;
 			Selected->SetSelected(true);
 			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Magenta, "Goal Found");
+			break;
 		}
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Cyan, FString::Printf(TEXT("Closed Set Count: %d"), ClosedSet.Num()));
 
 		if (OpenSet.Num() > 0) {
 			//Selected->SetSelected(false);
@@ -210,7 +206,7 @@ void AAStarGameMode::FindPath()
 	}
 }
 
-void AAStarGameMode::AddToOpenSet(AGPoint* AddPoint)
+bool AAStarGameMode::AddToOpenSet(AGPoint* AddPoint)
 {
 	bool found = false;
 	for (AGPoint* P : OpenSet) {
@@ -218,25 +214,36 @@ void AAStarGameMode::AddToOpenSet(AGPoint* AddPoint)
 			found = true;
 		}
 	}
+
+	if (!found) {
+		OpenSet.Push(AddPoint);
+	}
+	return !found;
+}
+
+bool AAStarGameMode::InClosedSet(AGPoint* Point)
+{
+	bool found = false;
 	if (!found) {
 		for (AGPoint* P : ClosedSet) {
-			if (P == AddPoint) {
+			if (P == Point) {
 				found = true;
 			}
 		}
 	}
 
-	if (!found) {
-		OpenSet.Push(AddPoint);
-	}
+	return found;
 }
 
 int32 AAStarGameMode::CalculateHeuristic(AGPoint* Start, AGPoint* EP)
 {
 	// Maybe revisit to remove sqrt
+	int32 D = 10; // ortho
+	int32 D2 = 14; // diag
 	int32 dx = abs(Start->x - EP->x);
 	int32 dy = abs(Start->y - EP->y);
-	return 1 * (dx + dy) + (sqrt(2) - 2 * 1) * FGenericPlatformMath::Min(dx, dy);
+	int32 H = D * FGenericPlatformMath::Max(dx, dy) + (D2 - D) * FGenericPlatformMath::Min(dx, dy);
+	return H;
 }
 
 void AAStarGameMode::BeginPlay()

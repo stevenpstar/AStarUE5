@@ -7,7 +7,7 @@
 void AAStarPlayerController::BeginPlay()
 {
 	bShowMouseCursor = true;
-	bEnableClickEvents = true;
+	bEnableClickEvents = false;
 	bEnableMouseOverEvents = true;
 }
 
@@ -20,8 +20,8 @@ void AAStarPlayerController::SetupInputComponent()
 void AAStarPlayerController::NextPath()
 {
 	AAStarGameMode* GameMode = Cast<AAStarGameMode>(GetWorld()->GetAuthGameMode());
-//	if (GameMode) {
-//		GameMode->FindPath();
-//	}
+	if (GameMode) {
+		//GameMode->FindPath();
+	}
 
 }

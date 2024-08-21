@@ -30,6 +30,7 @@ void AGPoint::BeginPlay()
 {
 	Super::BeginPlay();
 	Mesh->OnClicked.AddDynamic(this, &AGPoint::OnClickedActor);
+	Mesh->OnBeginCursorOver.AddDynamic(this, &AGPoint::OnHoveredActor);
 	SetSelected(false); // set default material
 }
 
@@ -40,6 +41,17 @@ void AGPoint::OnClickedActor(UPrimitiveComponent* TouchedActor, FKey ButtonPress
 	if (GameMode) {
 		GameMode->PointClicked(this);
 	}
+}
+
+void AGPoint::OnHoveredActor(UPrimitiveComponent* TouchedComponent)
+{
+
+	AAStarGameMode* GameMode = Cast<AAStarGameMode>(GetWorld()->GetAuthGameMode());
+	SetSelected(true);
+	if (GameMode) {
+		GameMode->PointClicked(this);
+	}
+
 }
 
 void AGPoint::SetParent(AGPoint* ParentPoint)
