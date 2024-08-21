@@ -2,6 +2,7 @@
 
 
 #include "AStarGameMode.h"
+#include "StarCharacter.h"
 #include <Kismet/GameplayStatics.h>
 #include "GPoint.h"
 // F(n) = g(n) + h(n)
@@ -10,8 +11,13 @@
 // h(n) is estimated cost of cheapest path from n to the goal
 void AAStarGameMode::PointClicked(AGPoint* Point)
 {
-	if (Selected) {
-		Selected->SetSelected(false);
+	if (!PlayerSelected) {
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "PlayerSelected = false");
+		return;
+	}
+	if (!Character) {
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "Character nullptr");
+		return;
 	}
 	Selected = GetPoint(0, 0);
 	int32 Index = GetIndex(Selected);
@@ -41,6 +47,12 @@ void AAStarGameMode::GenerateGrid()
 			}
 		}
 	}
+	if (BP_StarCharacter == nullptr) {
+		return;
+	}
+	AStarCharacter* Ch = GetWorld()->SpawnActor<AStarCharacter>(BP_StarCharacter,
+		FVector(0.0f, 0.0f, 100.0f), FRotator(0.0f, 0.0f, 0.0f), FActorSpawnParameters());
+	Ch->OnPoint = GetPoint(0, 0);
 }
 
 int32 AAStarGameMode::GetIndex(AGPoint* Point)
@@ -151,7 +163,8 @@ void AAStarGameMode::CheckPoint(int32 x, int32 y, int32* LowestCost, AGPoint *& 
 		int32 NewCost = Parent->Cost + Cost;
 		if (NewCost > GPoint->Cost) {
 			// Reparent
-			GPoint->Parent = Parent;
+		//	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, "Reparenting");
+			//GPoint->Parent = Parent;
 		}
 	}
 	else {
@@ -210,31 +223,48 @@ void AAStarGameMode::FindPath()
 		ClosedSet.Push(Selected);
 		if (Selected == EndPoint) {
 			GoalFound = true;
-			Selected->SetSelected(true);
 			break;
 		}
 
 		if (OpenSet.Num() > 0) {
-			//Selected->SetSelected(false);
-			NextPoint->SetSelected(true);
 			Selected = NextPoint;
 		}
 		else {
 			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "Cannot Find Path");
-		for (AGPoint* OP : OpenSet) {
-			OP->SetSelected(false);
-		}
-		for (AGPoint* OP : ClosedSet) {
-			OP->SetSelected(false);
-		}
-
-		OpenSet.Empty();
-		ClosedSet.Empty();
-		break;
-
+			break;
 		}
 		maxTriesCounter++;
 	}
+	AGPoint* Start = GetPoint(0, 0);
+	AGPoint* CurrentPoint = EndPoint;
+	CurrentPoint->SetSelected(true);
+	TArray<AGPoint*> Path;
+	Path.Push(EndPoint);
+	bool StartFound = false;
+	int32 pathTries = 74;
+	int32 pathCounter = 0;
+	while (!StartFound && pathCounter < pathTries) {
+		if (!CurrentPoint->Parent) {
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "Parent does not exist");
+			break;
+		}
+		CurrentPoint = CurrentPoint->Parent;
+		CurrentPoint->SetSelected(true);
+		if (CurrentPoint == Start) {
+			StartFound = true;
+		}
+		Path.Push(CurrentPoint);
+		pathCounter++;
+	}
+
+}
+
+void AAStarGameMode::SetCharacter(AStarCharacter* Char)
+{
+	// Sets character also sets it selected, not sure about setting character???
+	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "Setting Character");
+	Character = Char;
+	PlayerSelected = true;
 }
 
 bool AAStarGameMode::AddToOpenSet(AGPoint* AddPoint)

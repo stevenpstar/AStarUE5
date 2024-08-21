@@ -9,6 +9,7 @@
 /**
  * 
  */
+class AStarCharacter;
 class AGPoint;
 UCLASS()
 class ASTAR_API AAStarGameMode : public AGameModeBase
@@ -17,8 +18,13 @@ class ASTAR_API AAStarGameMode : public AGameModeBase
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 	TSubclassOf<class AGPoint> BP_AGPoint;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+	TSubclassOf<class AStarCharacter> BP_StarCharacter;
+
 	void PointClicked(AGPoint* Point);
 	void FindPath();
+	void SetCharacter(AStarCharacter* Char);
 private:
 	void GenerateGrid();
 	AGPoint* GetNextPoint(AGPoint* Point);
@@ -41,6 +47,9 @@ private:
 
 	TArray<AGPoint*> OpenSet;
 	TArray<AGPoint*> ClosedSet;
+
+	AStarCharacter* Character;
+	bool PlayerSelected = false;
 
 protected:
 	virtual void BeginPlay() override;

@@ -7,7 +7,7 @@
 void AAStarPlayerController::BeginPlay()
 {
 	bShowMouseCursor = true;
-	bEnableClickEvents = false;
+	bEnableClickEvents = true;
 	bEnableMouseOverEvents = true;
 }
 
