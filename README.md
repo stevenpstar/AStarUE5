@@ -12,6 +12,10 @@ Multiple characters can be selected and moved through the environment.
 - Characters don't rotate to movement direction or animate yet.
 
 Preview:
-[![YouTube](http://i.ytimg.com/vi/noj4CIJLnhE/hqdefault.jpg)](https://www.youtube.com/watch?v=noj4CIJLnhE)
+https://github.com/user-attachments/assets/d582cc6b-0c49-4de2-99c5-c3d6edc3b7f4
 
 ![Navigating](astarscreen2.png)
+
+
+
+
