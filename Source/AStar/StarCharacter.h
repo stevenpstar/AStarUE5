@@ -18,6 +18,15 @@ public:
 
 	void MoveAlongPath(TArray<AGPoint*> P);
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Component")
+	UAnimationAsset* Idle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Component")
+	UAnimationAsset* Move;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variable")
+	bool Moving = false;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -26,6 +35,7 @@ protected:
 
 	UFUNCTION()
 	void OnClickedCharacter(UPrimitiveComponent* TouchedActor, FKey ButtonPressed);
+
 
 
 public:	
@@ -38,6 +48,5 @@ public:
 private:
 	TArray<AGPoint*> AStarPath;
 	int32 NextPoint = 0;
-	bool Moving = false;
 
 };

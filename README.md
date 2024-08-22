@@ -13,4 +13,6 @@ Multiple characters can be selected and moved through the environment.
 
 Preview:
 
+[![Pathfinding Preview](https://img.youtube.com/vi/noj4CIJLnhE/0.jpg))](https://www.youtube.com/watch?v=noj4CIJLnhE)
+
 ![Navigating](astarscreen2.png)

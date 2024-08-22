@@ -28,8 +28,6 @@ void AStarCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, "BeginPlayCalled");
-//	APlayerController* Controller = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-//	Controller->bAllowC
 	SelectMesh->OnClicked.AddDynamic(this, &AStarCharacter::OnClickedCharacter);
 }
 
@@ -56,8 +54,9 @@ void AStarCharacter::Tick(float DeltaTime)
 				DeltaTime,
 				300.0f);
 		this->SetActorLocation(NewLocation);
-	//	FRotator PlayerRot = FRotationMatrix::MakeFromY(CurrentLocation - TargetLocation).Rotator();
-	//	this->SetActorRotation(PlayerRot);
+		FVector Dir = CurrentLocation - TargetLocation;
+		FRotator PlayerRot = FRotationMatrix::MakeFromX(FVector(Dir.X, Dir.Y, 0)).Rotator();
+		this->SetActorRotation(PlayerRot);
 		if (this->GetActorLocation() == TargetLocation) {
 			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, "Made it to the location!");
 			NextPoint -= 1;
