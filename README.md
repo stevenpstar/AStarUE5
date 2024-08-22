@@ -3,11 +3,14 @@ A* In UE5
 
 Work in Progress
 
-Mostly working (sometimes not shortest path)
+Mostly working!
 Walls are currently randomly placed each time.
 
-Working on moving a character through the environment
+Multiple characters can be selected and moved through the environment.
+- No limits on amount of movement
+- Bit buggy when setting initial character start positions.
+- Characters don't rotate to movement direction or animate yet.
 
 Preview:
 
-![Navigating](astarscreen1.png)
+![Navigating](astarscreen2.png)

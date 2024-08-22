@@ -43,6 +43,7 @@ protected:
 	void OnClickedActor(UPrimitiveComponent* TouchedActor, FKey ButtonPressed);
 	UFUNCTION()
 	void OnHoveredActor(UPrimitiveComponent* TouchedComponent );
+
 	void SetParent(AGPoint* ParentPoint);
 
 public:	

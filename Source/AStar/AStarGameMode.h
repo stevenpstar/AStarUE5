@@ -25,6 +25,8 @@ public:
 	void PointClicked(AGPoint* Point);
 	void FindPath();
 	void SetCharacter(AStarCharacter* Char);
+	void MoveCommand();
+	void StopMoving();
 private:
 	void GenerateGrid();
 	void AddNeighbours(AGPoint* Point);
@@ -40,6 +42,7 @@ private:
 	int32 CurrentPointIndex;
 
 	bool PlayerSelected = false;
+	bool PlayerMoving = false;
 
 	AGPoint* GetPoint(int32 x, int32 y);
 	AGPoint* GetNextPoint();
@@ -50,6 +53,7 @@ private:
 	TArray<AActor*> Points;
 	TArray<AGPoint*> OpenSet;
 	TArray<AGPoint*> ClosedSet;
+	TArray<AGPoint*> Path;
 
 
 protected:

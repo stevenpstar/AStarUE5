@@ -20,9 +20,24 @@ void AAStarGameMode::PointClicked(AGPoint* Point)
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "Character nullptr");
 		return;
 	}
-	Selected = GetPoint(0, 0);
+	if (PlayerMoving) { return; }
+	Selected = Character->OnPoint;
 	EndPoint = Point;
 	FindPath();
+}
+
+void AAStarGameMode::MoveCommand() {
+	if (Character && Path.Num() > 0) {
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "Move Along Path about to be called");
+		Character->MoveAlongPath(Path);
+		PlayerMoving = true;
+	}
+}
+
+void AAStarGameMode::StopMoving()
+{
+	PlayerMoving = false;
+	Selected = Character->OnPoint;
 }
 
 void AAStarGameMode::GenerateGrid()
@@ -53,6 +68,11 @@ void AAStarGameMode::GenerateGrid()
 	AStarCharacter* Ch = GetWorld()->SpawnActor<AStarCharacter>(BP_StarCharacter,
 		FVector(0.0f, 0.0f, 100.0f), FRotator(0.0f, 0.0f, 0.0f), FActorSpawnParameters());
 	Ch->OnPoint = GetPoint(0, 0);
+
+	AStarCharacter* Ch2 = GetWorld()->SpawnActor<AStarCharacter>(BP_StarCharacter,
+		FVector(7 * 200.0f, 7 * 200.0f, 100.0f), FRotator(0.0f, 0.0f, 0.0f), FActorSpawnParameters());
+	Ch2->OnPoint = GetPoint(7, 7);
+
 }
 
 AGPoint* AAStarGameMode::GetPoint(int32 x, int32 y)
@@ -197,7 +217,6 @@ void AAStarGameMode::FindPath()
 			"Selected not found, not finding path!");
 		return;
 	}
-	Selected->SetSelected(true);
 
 	ClosedSet.Push(Selected);
 	while (!GoalFound && maxTriesCounter < maxTries) {
@@ -233,10 +252,10 @@ void AAStarGameMode::FindPath()
 		}
 		maxTriesCounter++;
 	}
-	AGPoint* Start = GetPoint(0, 0);
+	AGPoint* Start = Character->OnPoint;
 	AGPoint* CurrentPoint = EndPoint;
 	CurrentPoint->SetSelected(true);
-	TArray<AGPoint*> Path;
+	Path.Empty();
 	Path.Push(EndPoint);
 	bool StartFound = false;
 	int32 pathTries = 74;
@@ -262,6 +281,12 @@ void AAStarGameMode::SetCharacter(AStarCharacter* Char)
 	// Sets character also sets it selected
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "Setting Character");
 	Character = Char;
+	if (Character->OnPoint == nullptr) {
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "Setting ONPoint to Start");
+		Character->OnPoint = GetPoint(Character->GetActorLocation().X / 200.0f, 
+			Character->GetActorLocation().Y / 200.0f);
+	}
+	Selected = Character->OnPoint;
 	PlayerSelected = true;
 }
 

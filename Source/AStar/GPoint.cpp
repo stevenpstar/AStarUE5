@@ -38,17 +38,16 @@ void AGPoint::SetTraversable(bool Trav)
 void AGPoint::BeginPlay()
 {
 	Super::BeginPlay();
-	//Mesh->OnClicked.AddDynamic(this, &AGPoint::OnClickedActor);
+	Mesh->OnClicked.AddDynamic(this, &AGPoint::OnClickedActor);
 	Mesh->OnBeginCursorOver.AddDynamic(this, &AGPoint::OnHoveredActor);
 	SetSelected(false); // set default material
 }
 
 void AGPoint::OnClickedActor(UPrimitiveComponent* TouchedActor, FKey ButtonPressed) {
-	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "AGPoint Clicked");
 	AAStarGameMode* GameMode = Cast<AAStarGameMode>(GetWorld()->GetAuthGameMode());
 	SetSelected(true);
 	if (GameMode) {
-		GameMode->PointClicked(this);
+		GameMode->MoveCommand();
 	}
 }
 

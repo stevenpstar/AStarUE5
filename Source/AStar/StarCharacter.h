@@ -16,6 +16,8 @@ public:
 	AStarCharacter();
 	AGPoint* OnPoint;
 
+	void MoveAlongPath(TArray<AGPoint*> P);
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -32,5 +34,10 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+private:
+	TArray<AGPoint*> AStarPath;
+	int32 NextPoint = 0;
+	bool Moving = false;
 
 };
