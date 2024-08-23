@@ -4,6 +4,8 @@
 #include "AStarGameMode.h"
 #include "StarCharacter.h"
 #include <Kismet/GameplayStatics.h>
+#include "Blueprint/UserWidget.h"
+#include "UserWidgetDebug.h"
 #include "GPoint.h"
 // F(n) = g(n) + h(n)
 // n = next node  on path
@@ -22,6 +24,9 @@ void AAStarGameMode::PointClicked(AGPoint* Point)
 	}
 	if (PlayerMoving) { return; }
 	Selected = Character->OnPoint;
+	if (DebugWidget) {
+		DebugWidget->SetTileCost(Point->Cost);
+	}
 	EndPoint = Point;
 	FindPath();
 }
@@ -186,15 +191,20 @@ void AAStarGameMode::CheckPoint(int32 x, int32 y, AGPoint* Parent, int32 Cost, b
 	if (!AddToOpenSet(GPoint)) {
 		// GPoint already existed in the open set, need to check if cost from new point is cheaper
 		int32 OldCost = Parent->Cost;
-		if (OldCost > GPoint->Cost + Cost) {
-			// Reparent
+	//	if (OldCost > GPoint->Cost + Cost) {
+	//		// Reparent
+	//		GPoint->Parent = Parent;
+	//		GPoint->Cost = Parent->Cost + Cost;
+	//	}
+		if (Parent->Cost + Cost < GPoint->Cost) {
 			GPoint->Parent = Parent;
+			GPoint->Cost = Parent->Cost + Cost;
 		}
 	}
 	else {
 		GPoint->Parent = Parent;
+		GPoint->Cost = Parent->Cost + Cost;
 	}
-	GPoint->Cost = Parent->Cost + Cost;
 }
 
 void AAStarGameMode::FindPath()
@@ -276,6 +286,163 @@ void AAStarGameMode::FindPath()
 
 }
 
+void AAStarGameMode::FindMoveableTiles()
+{
+
+	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, "Finding Moveable Tiles");
+	// Find range of character movement.
+	int32 range = 40;
+	int32 maxTries = 100;
+	int32 maxTriesCounter = 0;
+	bool GoalFound = false;
+	// set every point found in prev open/closed sets to not selected to clear visuals
+	for (AActor* OP : Points) {
+		AGPoint* P = Cast<AGPoint>(OP);
+		P->SetWalkable(false);
+		P->MCost = 0;
+	}
+	OpenSetMov.Empty();
+	ClosedSetMov.Empty();
+	// add starting point
+	Character->OnPoint->Cost = 0;
+	OpenSetMov.Push(Character->OnPoint);
+	int32 ind = 0;
+	while (OpenSetMov.Num() > 0 && maxTriesCounter < maxTries) {
+		// Add Neighbours
+		AddNeighboursUnderCost(OpenSetMov[ind], range);
+		OpenSetMov[ind]->SetWalkable(true);
+		ClosedSetMov.Push(OpenSetMov[ind]);
+		OpenSetMov.RemoveAt(ind);
+		if (OpenSetMov.Num() == 0) { return; }
+		int32 lowestCost = INT32_MAX;
+		for (int i = 0; i < OpenSetMov.Num(); i++) {
+			if (OpenSetMov[i]->MCost < lowestCost && OpenSetMov[i]->MCost <= 40) {
+				lowestCost = OpenSetMov[i]->MCost;
+				ind = i;
+			}
+		}
+		if (ind >= OpenSetMov.Num()) { return; }
+		AGPoint* NextPoint = OpenSetMov[ind];
+		maxTriesCounter++;
+	}
+	// Reset cost
+	if (OpenSetMov.Num() > 0) {
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, "OpenSetMov big");
+	}
+}
+
+void AAStarGameMode::CheckPointUnderCost(int32 x, int32 y, AGPoint* Parent, int32 Cost, bool* FoundWall)
+{
+	AGPoint* GPoint = GetPoint(x, y);
+	if (GPoint == Parent) {
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "GPoint == Parent this shouldn't happen");
+	}
+	if (!GPoint) {
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "GPoint Not Found");
+		return;
+	}
+	if (InClosedSetMov(GPoint) || GPoint->Traversable == false) {
+		// Ignore this point if it is already in the closed set or it is a non-traversable tile
+
+		if (!GPoint->Traversable) {
+			*FoundWall = true;
+		}
+		return;
+	}
+	bool found = false;
+	for (AGPoint* P : OpenSetMov) {
+		if (P == GPoint) {
+			found = true;
+		}
+	}
+	if (found) {
+
+		int32 NewCost = Parent->MCost + Cost;
+		if (NewCost < GPoint->MCost) {
+			// Reparent
+			GPoint->Parent = Parent;
+			GPoint->MCost = Parent->MCost + Cost;
+		}
+	}
+	else {
+		GPoint->Parent = Parent;
+		GPoint->MCost = Parent->MCost + Cost;
+	}
+
+	if (GPoint->MCost > 40) {
+		return;
+	}
+
+	// extremely specific debug message
+	if (GPoint->x == 1 && GPoint->y == 1) {
+		// COST SHOULD BE 14 HERE
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue,
+			FString::Printf(TEXT("Parent Cost : % d"), Parent->MCost));
+
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue,
+			FString::Printf(TEXT("GPoint Cost : % d"), GPoint->MCost));
+	}
+
+	AddToOpenSetMov(GPoint);
+}
+
+
+void AAStarGameMode::AddNeighboursUnderCost(AGPoint* Point, int32 cost)
+{
+	if (!Point) { 
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "Point is null");
+	}
+	int32 x = Point->x;
+	int32 y = Point->y;
+
+	// Checking walls
+	bool NorthWall = false;
+	bool EastWall = false;
+	bool SouthWall = false;
+	bool WestWall = false;
+	bool NEWall = false;
+	bool NWWall = false;
+	bool SEWall = false;
+	bool SWWall = false;
+	// Check North
+	if (y + 1 < mapHeight) {
+		CheckPointUnderCost(x, y + 1, Point, 10, &NorthWall);
+	}
+	// Check South
+	if (y - 1 >= 0) {
+		CheckPointUnderCost(x, y - 1, Point, 10, &SouthWall);
+	}
+	// Check East
+	if (x + 1 < mapWidth) {
+		CheckPointUnderCost(x + 1, y, Point, 10, &EastWall);
+	}
+	// Check West
+	if (x - 1 >= 0) {
+		CheckPointUnderCost(x - 1, y, Point, 10, &WestWall);
+	}
+	// Check North-East
+	if (y + 1 < mapHeight && x + 1 < mapWidth) {
+		if (NorthWall == false && EastWall == false) 
+			CheckPointUnderCost(x + 1, y + 1, Point, 14, &NEWall);
+	}
+
+	if (y - 1 >= 0 && x + 1 < mapWidth) {
+		if (SouthWall == false && EastWall == false) 
+			CheckPointUnderCost(x + 1, y - 1, Point, 14, &SEWall);
+	}
+
+	if (y + 1 < mapHeight && x - 1 >= 0) {
+		if (NorthWall == false && WestWall == false) 
+			CheckPointUnderCost(x - 1, y + 1, Point, 14, &NWWall);
+	}
+
+	if (y - 1 >= 0 && x - 1 >= 0) {
+		if (SouthWall == false && WestWall == false) 
+			CheckPoint(x - 1, y - 1, Point, 14, &SWWall);
+	}
+}
+
+
 void AAStarGameMode::SetCharacter(AStarCharacter* Char)
 {
 	// Sets character also sets it selected
@@ -288,6 +455,7 @@ void AAStarGameMode::SetCharacter(AStarCharacter* Char)
 	}
 	Selected = Character->OnPoint;
 	PlayerSelected = true;
+	FindMoveableTiles();
 }
 
 bool AAStarGameMode::AddToOpenSet(AGPoint* AddPoint)
@@ -317,6 +485,33 @@ bool AAStarGameMode::InClosedSet(AGPoint* Point)
 	return found;
 }
 
+bool AAStarGameMode::AddToOpenSetMov(AGPoint* AddPoint)
+{
+	bool found = false;
+	for (AGPoint* P : OpenSetMov) {
+		if (P == AddPoint) {
+			found = true;
+		}
+	}
+
+	if (!found) {
+		OpenSetMov.Push(AddPoint);
+	}
+	// This is bad, basically return true if the function added the node to the open set
+	return !found;
+}
+
+bool AAStarGameMode::InClosedSetMov(AGPoint* Point)
+{
+	bool found = false;
+	for (AGPoint* P : ClosedSetMov) {
+		if (P == Point) {
+			found = true;
+		}
+	}
+	return found;
+}
+
 int32 AAStarGameMode::CalculateHeuristic(AGPoint* Start, AGPoint* EP)
 {
 	// Maybe revisit to remove sqrt
@@ -332,4 +527,11 @@ void AAStarGameMode::BeginPlay()
 {
 	GenerateGrid();
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AGPoint::StaticClass(), Points);
+	if (WidgetDebugClass) {
+		DebugWidget = Cast<UUserWidgetDebug>(CreateWidget(GetWorld(), WidgetDebugClass));
+		if (DebugWidget) {
+			DebugWidget->AddToViewport();
+			DebugWidget->SetTileCost(0);
+		}
+	}
 }

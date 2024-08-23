@@ -10,6 +10,8 @@ AGPoint::AGPoint()
 	PrimaryActorTick.bCanEverTick = false;
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("Mesh");
 	RootComponent = Mesh;
+	PathableMesh = CreateDefaultSubobject<UStaticMeshComponent>("PathableMesh");
+	PathableMesh->SetupAttachment(RootComponent);
 }
 
 void AGPoint::SetSelected(bool Selected)
@@ -23,6 +25,11 @@ void AGPoint::SetSelected(bool Selected)
 	if (DefaultMaterial) {
 		Mesh->SetMaterial(0, DefaultMaterial);
 	}
+}
+
+void AGPoint::SetWalkable(bool Walkable)
+{
+	PathableMesh->SetVisibility(Walkable);
 }
 
 void AGPoint::SetTraversable(bool Trav)

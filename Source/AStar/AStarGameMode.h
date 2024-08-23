@@ -11,6 +11,7 @@
  */
 class AStarCharacter;
 class AGPoint;
+class UUserWidgetDebug;
 UCLASS()
 class ASTAR_API AAStarGameMode : public AGameModeBase
 {
@@ -24,16 +25,22 @@ public:
 
 	void PointClicked(AGPoint* Point);
 	void FindPath();
+	void FindMoveableTiles();
 	void SetCharacter(AStarCharacter* Char);
 	void MoveCommand();
 	void StopMoving();
 private:
 	void GenerateGrid();
 	void AddNeighbours(AGPoint* Point);
+	void AddNeighboursUnderCost(AGPoint* Point, int32 Cost);
 	void CheckPoint(int32 x, int32 y, AGPoint* Parent, int32 Cost, bool* FoundWall);
+	void CheckPointUnderCost(int32 x, int32 y, AGPoint* Parent, int32 Cost, bool* FoundWall);
 
 	bool AddToOpenSet(AGPoint* AddPoint);
 	bool InClosedSet(AGPoint* Point);
+	bool AddToOpenSetMov(AGPoint* AddPoint);
+	bool InClosedSetMov(AGPoint* Point);
+
 
 	int32 CalculateHeuristic(AGPoint* Start, AGPoint* End);
 	
@@ -54,8 +61,14 @@ private:
 	TArray<AGPoint*> OpenSet;
 	TArray<AGPoint*> ClosedSet;
 	TArray<AGPoint*> Path;
-
+	TArray<AGPoint*> OpenSetMov;
+	TArray<AGPoint*> ClosedSetMov;
 
 protected:
 	virtual void BeginPlay() override;
+	UPROPERTY(EditAnywhere, Category = "Widgets")
+	TSubclassOf<class UUserWidget> WidgetDebugClass;
+
+	UPROPERTY()
+	UUserWidgetDebug* DebugWidget;
 };

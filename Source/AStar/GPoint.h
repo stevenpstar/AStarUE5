@@ -18,6 +18,9 @@ public:
 	int32 y;
 	int32 height;
 	int32 Cost = 0;
+
+	// Cost for calculating all movement (range)
+	int32 MCost = 0;
 	bool Traversable = true;
 	AGPoint* Parent = nullptr;
 
@@ -31,6 +34,7 @@ public:
 	UMaterialInterface* TraversableMaterial;
 
 	void SetSelected(bool Selected);
+	void SetWalkable(bool Walkable);
 	void SetTraversable(bool Trav);
 
 protected:
@@ -38,6 +42,18 @@ protected:
 	virtual void BeginPlay() override;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* Mesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UStaticMeshComponent* SelectMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UStaticMeshComponent* PathableMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UStaticMeshComponent* PathableEMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UStaticMeshComponent* PathableSMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UStaticMeshComponent* PathableWMesh;
 
 	UFUNCTION()
 	void OnClickedActor(UPrimitiveComponent* TouchedActor, FKey ButtonPressed);
