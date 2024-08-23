@@ -5,6 +5,7 @@
 #include "AStarGameMode.h"
 #include "GPoint.h"
 #include <Kismet/GameplayStatics.h>
+#include <Kismet/KismetMathLibrary.h>
 
 // Sets default values
 AStarCharacter::AStarCharacter()
@@ -13,6 +14,9 @@ AStarCharacter::AStarCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 	SelectMesh = CreateDefaultSubobject<UStaticMeshComponent>("SelectMesh");
 	SelectMesh->SetupAttachment(RootComponent);
+
+	SelectedMesh = CreateDefaultSubobject<UStaticMeshComponent>("SelectedMesh");
+	SelectedMesh->SetupAttachment(RootComponent);
 }
 
 void AStarCharacter::MoveAlongPath(TArray<AGPoint*> P)
@@ -23,22 +27,49 @@ void AStarCharacter::MoveAlongPath(TArray<AGPoint*> P)
 	NextPoint = AStarPath.Num() - 1;
 }
 
+void AStarCharacter::SetSelected(bool Sel)
+{
+	if (SelectedMesh) {
+		SelectedMesh->SetVisibility(Sel);
+	}
+}
+
 // Called when the game starts or when spawned
 void AStarCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, "BeginPlayCalled");
 	SelectMesh->OnClicked.AddDynamic(this, &AStarCharacter::OnClickedCharacter);
+	SelectMesh->OnBeginCursorOver.AddDynamic(this, &AStarCharacter::OnHoveredCharacter);
+	SelectMesh->OnEndCursorOver.AddDynamic(this, &AStarCharacter::OnStopHoveredCharacter);
+	CharRotation = GetMesh()->GetComponentRotation();
 }
 
 void AStarCharacter::OnClickedCharacter(UPrimitiveComponent* TouchedActor, FKey ButtonPressed)
 {
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, "OnClickedCharacter");
+	SelectedMesh->SetVisibility(true);
 	AAStarGameMode* GameMode = Cast<AAStarGameMode>(GetWorld()->GetAuthGameMode());
 	if (GameMode) {
 		GameMode->SetCharacter(this);
 	}
 }
+
+void AStarCharacter::OnHoveredCharacter(UPrimitiveComponent* TouchedComponent)
+{
+	SelectedMesh->SetVisibility(true);
+	AAStarGameMode* GameMode = Cast<AAStarGameMode>(GetWorld()->GetAuthGameMode());
+	if (GameMode) {
+		GameMode->HoveringCharacter(this);
+	}
+
+}
+
+void AStarCharacter::OnStopHoveredCharacter(UPrimitiveComponent* TouchedComponent)
+{
+	SelectedMesh->SetVisibility(false);
+}
+
 
 // Called every frame
 void AStarCharacter::Tick(float DeltaTime)
@@ -55,10 +86,17 @@ void AStarCharacter::Tick(float DeltaTime)
 				300.0f);
 		this->SetActorLocation(NewLocation);
 		FVector Dir = CurrentLocation - TargetLocation;
-		FRotator PlayerRot = FRotationMatrix::MakeFromX(FVector(Dir.X, Dir.Y, 0)).Rotator();
-		this->SetActorRotation(PlayerRot);
+		FRotator PlayerRot = GetMesh()->GetComponentRotation();//FRotationMatrix::MakeFromX().Rotator();
+		//FRotator TargetRot = FRotationMatrix::MakeFromX(FVector(TargetLocation.X, TargetLocation.Y, 0)).Rotator();
+		FRotator DirRot = FRotationMatrix::MakeFromX(FVector(Dir.X, Dir.Y, 0.0f)).Rotator();
+		//FRotator NewRot = UKismetMathLibrary::RLerp(PlayerRot, TargetRot, 1.0f, true);
+		FRotator NewRot = FMath::RInterpConstantTo(PlayerRot, DirRot, DeltaTime, 100.0f);
+		Rotating = true;
+		this->SetActorRotation(DirRot);
 		if (this->GetActorLocation() == TargetLocation) {
 			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, "Made it to the location!");
+			CharRotation = GetMesh()->GetComponentRotation();
+			Rotating = false;
 			NextPoint -= 1;
 			OnPoint = Target;
 			if (Target == AStarPath[0]) {

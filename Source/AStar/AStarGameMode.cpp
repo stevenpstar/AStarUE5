@@ -23,7 +23,12 @@ void AAStarGameMode::PointClicked(AGPoint* Point)
 		return;
 	}
 	if (PlayerMoving) { return; }
-	Selected = Character->OnPoint;
+	if (Character->OnPoint) {
+		Selected = Character->OnPoint;
+	}
+	else {
+		Selected = GetPoint(0, 0);
+	}
 	if (DebugWidget) {
 		DebugWidget->SetTileCost(Point->Cost);
 	}
@@ -209,7 +214,7 @@ void AAStarGameMode::CheckPoint(int32 x, int32 y, AGPoint* Parent, int32 Cost, b
 
 void AAStarGameMode::FindPath()
 {
-	int32 maxTries = 100;
+	int32 maxTries = 500;
 	int32 maxTriesCounter = 0;
 	bool GoalFound = false;
 	// set every point found in prev open/closed sets to not selected to clear visuals
@@ -225,7 +230,6 @@ void AAStarGameMode::FindPath()
 	if (!Selected) {
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, 
 			"Selected not found, not finding path!");
-		return;
 	}
 
 	ClosedSet.Push(Selected);
@@ -257,7 +261,6 @@ void AAStarGameMode::FindPath()
 			Selected = NextPoint;
 		}
 		else {
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "Cannot Find Path");
 			break;
 		}
 		maxTriesCounter++;
@@ -292,7 +295,7 @@ void AAStarGameMode::FindMoveableTiles()
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Green, "Finding Moveable Tiles");
 	// Find range of character movement.
 	int32 range = 40;
-	int32 maxTries = 100;
+	int32 maxTries = 500;
 	int32 maxTriesCounter = 0;
 	bool GoalFound = false;
 	// set every point found in prev open/closed sets to not selected to clear visuals
@@ -447,6 +450,9 @@ void AAStarGameMode::SetCharacter(AStarCharacter* Char)
 {
 	// Sets character also sets it selected
 	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Blue, "Setting Character");
+	if (Character) {
+		Character->SetSelected(false);
+	}
 	Character = Char;
 	if (Character->OnPoint == nullptr) {
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "Setting ONPoint to Start");
@@ -454,8 +460,28 @@ void AAStarGameMode::SetCharacter(AStarCharacter* Char)
 			Character->GetActorLocation().Y / 200.0f);
 	}
 	Selected = Character->OnPoint;
+	if (!Selected) {
+		Selected = GetPoint(0, 0);
+	}
 	PlayerSelected = true;
 	FindMoveableTiles();
+}
+
+void AAStarGameMode::HoveringCharacter(AStarCharacter* Char)
+{
+	for (AActor* A : Points) {
+		AGPoint* P = Cast<AGPoint>(A);
+		if (P) {
+			P->SetSelected(false);
+		}
+	}
+
+	OpenSet.Empty();
+	ClosedSet.Empty();
+	OpenSetMov.Empty();
+	ClosedSetMov.Empty();
+
+	// This shit cray
 }
 
 bool AAStarGameMode::AddToOpenSet(AGPoint* AddPoint)

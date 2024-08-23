@@ -27,6 +27,7 @@ public:
 	void FindPath();
 	void FindMoveableTiles();
 	void SetCharacter(AStarCharacter* Char);
+	void HoveringCharacter(AStarCharacter* Char);
 	void MoveCommand();
 	void StopMoving();
 private:

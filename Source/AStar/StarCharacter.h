@@ -27,15 +27,27 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variable")
 	bool Moving = false;
 
+	void SetSelected(bool Sel);
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* SelectMesh;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UStaticMeshComponent* SelectedMesh;
+
 	UFUNCTION()
 	void OnClickedCharacter(UPrimitiveComponent* TouchedActor, FKey ButtonPressed);
+	UFUNCTION()
+	void OnHoveredCharacter(UPrimitiveComponent* TouchedComponent );
+	UFUNCTION()
+	void OnStopHoveredCharacter(UPrimitiveComponent* TouchedComponent );
 
+
+	FRotator CharRotation;
+	bool Rotating = false;
 
 
 public:	
